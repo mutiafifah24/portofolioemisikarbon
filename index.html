@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon & Emission Lampung</title>
+
+    <!-- LEAFLET CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* =========================
+            JUDUL
+        ========================= */
+        .title-box {
+            position: absolute;
+            top: 15px;
+            left: 60px;
+            z-index: 1000;
+            background: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+
+        .title-box h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #006837;
+        }
+
+        .title-box p {
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* =========================
+            INFO PANEL
+        ========================= */
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 240px;
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-size: 12px;
+        }
+
+        .info-panel h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+        }
+
+        /* =========================
+            LEGEND
+        ========================= */
+        .legend {
+            background: white;
+            padding: 12px 14px;
+            line-height: 22px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-size: 12px;
+        }
+
+        .legend h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            border-radius: 3px;
+        }
+
+        /* =========================
+            POPUP STATISTIK
+        ========================= */
+        .popup-statistik {
+            width: 260px;
+        }
+
+        .popup-statistik h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 7px;
+            color: #006837;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #eeeeee;
+            font-size: 12px;
+        }
+
+        .stat-label {
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 7px;
+        }
+
+        .dot-carbon { background: #006837; }
+        .dot-emission { background: #e31a1c; }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 9px;
+            padding-top: 9px;
+            border-top: 2px solid #333;
+            font-size: 13px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- PETA -->
+    <div id="map"></div>
+
+    <!-- JUDUL -->
+    <div class="title-box">
+        <h2>Carbon & Emission Lampung</h2>
+        <p>Pemetaan Stok & Emisi Karbon Provinsi Lampung</p>
+    </div>
+
+    <!-- INFO PANEL -->
+    <div class="info-panel">
+        <h4>Informasi Peta</h4>
+        <p><b>Metode:</b> Google Earth Engine</p>
+        <p><b>Wilayah:</b> Provinsi Lampung</p>
+        <p><b>Dataset:</b> ESA CCI Biomass</p>
+        <p>Klik wilayah kabupaten/kota untuk melihat batas administratif.</p>
+    </div>
+
+    <!-- LEAFLET JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. INISIALISASI PETA
+        var map = L.map('map');
+
+        // 2. BASEMAP OPENSTREETMAP
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+        osm.addTo(map);
+
+        // 3. BOUNDING BOX LAMPUNG (Menyesuaikan raster GEE)
+        var bounds = [
+            [-6.0, 103.4],
+            [-3.4, 106.0]
+        ];
+
+        // 4. RASTER STOK KARBON 2020
+        var carbonLayer = L.imageOverlay(
+            'lampung_carbon_stock_color.png',
+            bounds,
+            {
+                opacity: 0.8,
+                interactive: false
+            }
+        );
+        carbonLayer.addTo(map);
+
+        // 5. RASTER EMISI KARBON 2010-2020
+        var emissionLayer = L.imageOverlay(
+            'lampung_carbon_emission_color.png',
+            bounds,
+            {
+                opacity: 0.8,
+                interactive: false
+            }
+        );
+
+        // 6. LAYER BATAS ADMINISTRASI KABUPATEN/KOTA
+        var adminLayer = L.geoJSON(null, {
+            style: function(feature) {
+                return {
+                    color: '#000000',
+                    weight: 1.5,
+                    opacity: 0.8,
+                    fill: true,
+                    fillColor: '#ffffff',
+                    fillOpacity: 0.0
+                };
+            },
+            onEachFeature: function(feature, layer) {
+                var nama = (
+                    feature.properties.WADMKK ||
+                    feature.properties.NAMOBJ ||
+                    'Wilayah Tidak Diketahui'
+                ).trim();
+
+                layer.bindPopup(`
+                    <div class="popup-statistik">
+                        <h3>${nama}</h3>
+                        <p><b>Status:</b> Wilayah Administrasi Kabupaten/Kota di Provinsi Lampung.</p>
+                    </div>
+                `, {
+                    maxWidth: 300,
+                    closeButton: true
+                });
+
+                // Efek Hover Interaktif
+                layer.on('mouseover', function(e) {
+                    e.target.setStyle({
+                        weight: 3,
+                        color: '#006837',
+                        fillOpacity: 0.1
+                    });
+                    e.target.bringToFront();
+                });
+
+                layer.on('mouseout', function(e) {
+                    adminLayer.resetStyle(e.target);
+                });
+            }
+        });
+
+        // 7. LOAD GEOJSON (Pastikan path file geojson kamu sesuai)
+        fetch('../data/LAMPUNG_4326.geojson')
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('GeoJSON tidak ditemukan');
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                adminLayer.addData(data);
+                adminLayer.addTo(map);
+                adminLayer.bringToFront();
+            })
+            .catch(function(error) {
+                console.error('ERROR GEOJSON:', error);
+            });
+
+        // 8. FIT MAP KE BOUNDS LAMPUNG
+        map.fitBounds(bounds);
+
+        // 9. LAYER CONTROL
+        var baseMaps = {
+            "OpenStreetMap": osm
+        };
+
+        var overlayMaps = {
+            "Stok Karbon 2020 (Ton C/ha)": carbonLayer,
+            "Emisi Karbon (Ton CO2-eq)": emissionLayer,
+            "Batas Kabupaten/Kota": adminLayer
+        };
+
+        L.control.layers(baseMaps, overlayMaps, {
+            collapsed: false
+        }).addTo(map);
+
+        // 10. LEGEND
+        var legend = L.control({ position: 'bottomright' });
+
+        legend.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML += '<h4>Keterangan Peta</h4>';
+            div.innerHTML += '<i style="background:#006837;"></i> Stok Karbon Tinggi<br>';
+            div.innerHTML += '<i style="background:#c2e699;"></i> Stok Karbon Rendah<br>';
+            div.innerHTML += '<i style="background:#e31a1c;"></i> Emisi Karbon Tinggi<br>';
+            return div;
+        };
+
+        legend.addTo(map);
+    </script>
+</body>
+
+</html>
